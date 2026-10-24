@@ -1,5 +1,8 @@
 resource "aws_s3_bucket" "terraform_state" {
   bucket_prefix = "ai-doc-processing-tfstate-"
+  lifecycle {
+    prevent_destroy = true
+  }
  
 }
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -22,4 +25,27 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
       sse_algorithm = "AES256"
     }
   }
+}
+resource "aws_s3_bucket_policy" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.terraform_state.arn,"${aws_s3_bucket.terraform_state.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
 }
